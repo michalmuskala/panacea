@@ -179,4 +179,8 @@ defmodule Panacea.Lexer.Dfa do
     do: pack_transitions([{{c1, ?\n - 1}, s}, {{?\n + 1, c2}, s} | rest], [{?\n, s} | acch], acct)
   defp pack_transitions([{{c1, c2}, s} | rest], acch, acct) when c1 - c2 == 1,
     do: pack_transitions(rest, [{c1, s}, {c2, s} | acch], acct)
+  defp pack_transitions([trans | rest], acch, acct),
+    do: pack_transitions(rest, acch, [trans | acct])
+  defp pack_transitions([], acch, acct),
+    do: acch ++ Enum.reverse(acct)
 end
