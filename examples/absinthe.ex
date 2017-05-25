@@ -43,19 +43,26 @@ defmodule Absinthe.Lexer do
   deflexer :lexer do
     defrule ignored,
       do: :skip
-    defrule punctuator, meta(token: token, line: line),
-      do: {:token, {String.to_atom(token), line}}
-    defrule reserved_word, meta(token: token, line: line),
-      do: {:token, {String.to_atom(token), line}}
-    defrule int_value, meta(token: token, line: line),
-      do: {:token, {:int_value, line, token}}
-    defrule float_value, meta(token: token, line: line),
-      do: {:token, {:float_value, line, token}}
-    defrule string_value, meta(token: token, line: line),
-      do: {:token, {:string_value, line, token}}
-    defrule boolean_value, meta(token: token, line: line),
-      do: {:token, {:boolean_value, line, token}}
-    defrule name, meta(token: token, line: line),
-      do: {:token, {:name, line, token}}
+    defrule punctuator, meta(token: token) = meta,
+      do: {:token, {String.to_atom(token), line_data(meta)}}
+    defrule reserved_word, meta(token: token) = meta,
+      do: {:token, {String.to_atom(token), line_data(meta)}}
+    defrule int_value, meta(token: token) = meta,
+      do: {:token, {:int_value, line_data(meta), token}}
+    defrule float_value, meta(token: token) = meta,
+      do: {:token, {:float_value, line_data(meta), token}}
+    defrule string_value, meta(token: token) = meta,
+      do: {:token, {:string_value, line_data(meta), token}}
+    defrule boolean_value, meta(token: token) = meta,
+      do: {:token, {:boolean_value, line_data(meta), token}}
+    defrule name, meta(token: token) = meta,
+      do: {:token, {:name, line_data(meta), token}}
+  end
+
+  import Panacea.Lexer, only: [meta: 1]
+
+  @compile {:inline, line_data: 1}
+  defp line_data(meta(line: line, start: start, len: len)) do
+    {line, {start, start + len}}
   end
 end

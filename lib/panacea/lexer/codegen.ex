@@ -1,17 +1,4 @@
 defmodule Panacea.Lexer.Codegen do
-  @moduledoc """
-  This generates a name_state function
-
-      name_state(char, state, line, column)
-
-  Actions:
-
-    * `{:accept, token, state}`
-    * `{:more, state}`
-    * `{:error, error}`
-
-  """
-
   alias Panacea.Lexer.Dfa
 
   import Panacea.Lexer, only: [meta: 0, meta: 1, meta: 2]
@@ -26,7 +13,7 @@ defmodule Panacea.Lexer.Codegen do
     quote do
       def unquote(name)(input) do
         try do
-          unquote(first_name)(input, _start = 1, _line = 1, _len = 0, _original = input)
+          unquote(first_name)(input, _start = 0, _line = 1, _len = 0, _original = input)
         catch
           {:panacea, error} ->
             {:error, error}
