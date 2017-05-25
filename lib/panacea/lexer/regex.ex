@@ -42,7 +42,7 @@ defmodule Panacea.Lexer.Regex do
   end
 
   def parse(string) do
-    string = unescape_string(string)
+    # string = unescape_string(string)
     try do
       reg(string, 0, %{})
     catch
@@ -134,7 +134,7 @@ defmodule Panacea.Lexer.Regex do
   end
   defp single(<<char :: utf8, rest :: binary>>, idx, state) do
     if special_char?(char, state) do
-      parse_error({:illegal_char, <<char :: utf8>>})
+      parse_error({:illegal_char, <<char :: utf8>>, rest})
     else
       {char, rest} = char(char, rest)
       {{:lit, [char]}, idx, rest}
@@ -166,7 +166,7 @@ defmodule Panacea.Lexer.Regex do
     end
   end
 
-  defp special_char?(c, _state), do: c in '^.[]$()|*+?{}\\'
+  defp special_char?(c, _state), do: c in '^.[]$()|*+?{}'
 
   defp unescape_string(string) do
     Macro.unescape_string(string, &unescape_map/1)

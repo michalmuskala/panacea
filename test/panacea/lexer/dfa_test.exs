@@ -12,6 +12,5 @@ defmodule Panacea.Lexer.DfaTest do
     assert {:ok, reg} = Panacea.Lexer.Regex.parse(str)
     {nfa, first} = Panacea.Lexer.Nfa.from_regex([{reg, []}])
     Panacea.Lexer.Dfa.build(nfa, first)
-    |> IO.inspect(charlists: :as_lists)
   end
 end

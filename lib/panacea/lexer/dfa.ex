@@ -94,7 +94,7 @@ defmodule Panacea.Lexer.Dfa do
     new_states = for {:epsilon, n} <- edges, not is_element(n, acc), do: n
     eclosure(new_states ++ rest, nfa, add_element(state, acc))
   end
-  defp eclosure([], _, acc), do: acc
+  defp eclosure([], _nfa, acc), do: acc
 
   defp move(states, range, nfa) do
     for n <- states,
@@ -104,12 +104,10 @@ defmodule Panacea.Lexer.Dfa do
       do: state
   end
 
-  defp contained?({c1, c2} = range, ranges) do
-    Enum.any?(ranges, fn
-      ^range   -> true
-      {c3, c4} -> c1 >= c3 and c2 <= c4
-    end)
-  end
+  defp contained?({c1, c2}, [{c3, c4} | _rest]) when c1 >= c3 and c2 <= c4, do: true
+  defp contained?(range, [range | _rest]), do: true
+  defp contained?(range, [_range | rest]), do: contained?(range, rest)
+  defp contained?(_range, []), do: false
 
   import :ordsets, only: []
   import :orddict, only: []
