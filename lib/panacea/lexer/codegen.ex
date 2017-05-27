@@ -1,7 +1,7 @@
 defmodule Panacea.Lexer.Codegen do
   alias Panacea.Lexer.Dfa
 
-  import Panacea.Lexer, only: [meta: 0, meta: 1, meta: 2]
+  import Panacea.Lexer, only: [meta: 0, meta: 1]
 
   def compile(name, reas) do
     {dfa, first} = build_dfa(reas)
@@ -23,13 +23,9 @@ defmodule Panacea.Lexer.Codegen do
         end
       end
 
-      @doc false
-      def unquote(name)(<<input::binary>>, start, line, len, original) do
+      @compile {:inline, panacea_state: 6}
+      defp panacea_state(input, start, line, len, original, unquote(name)) do
         unquote(first_name)(input, start, line, len, original)
-      end
-
-      defp unquote(:"#{name}_enter")(<<input::binary>>, state, start, line, len, original) do
-        apply(__MODULE__, state, [input, start, line, len, original])
       end
     end
   end
@@ -45,7 +41,7 @@ defmodule Panacea.Lexer.Codegen do
       defp unquote(state_name)("", start, line, len, original) do
         throw {:panacea, {:eof, line, start + len}}
       end
-      defp unquote(state_name)(<<char::utf8>> <> rest, start, line, len, original) do
+      defp unquote(state_name)(<<char::utf8>> <> _rest, start, line, len, original) do
         throw {:panacea, {char, line, start + len}}
       end
     end
@@ -71,13 +67,13 @@ defmodule Panacea.Lexer.Codegen do
         meta = meta(start: start, line: line, len: len, token: token)
         case unquote(action)(meta) do
           {:token, token} ->
-            [token | unquote(name)(rest, start + len, line, 0, new_original)]
+            [token | panacea_state(rest, start + len, line, 0, new_original, unquote(name))]
           :skip ->
-            unquote(name)(rest, start + len, line, 0, new_original)
+            panacea_state(rest, start + len, line, 0, new_original, unquote(name))
           {:enter_token, state, token} ->
-            [token | unquote(:"#{name}_enter")(rest, state, start + len, line, 0, new_original)]
+            [token | panacea_state(rest, start + len, line, 0, new_original, state)]
           {:enter_skip, state} ->
-            unquote(:"#{name}_enter")(rest, state, start + len, line, 0, new_original)
+            panacea_state(rest, start + len, line, 0, new_original, state)
           {:error, error} ->
             throw {:panacea, error}
         end
@@ -108,7 +104,7 @@ defmodule Panacea.Lexer.Codegen do
     next_name = :"#{name}_#{next}"
     quote do
       defp unquote(state_name)("\n" <> rest, start, line, len, original) do
-        unquote(next_name)(rest, 1, line + 1, len + 1, original)
+        unquote(next_name)(rest, 0, line + 1, len + 1, original)
       end
     end
   end

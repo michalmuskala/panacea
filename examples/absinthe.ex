@@ -1,6 +1,8 @@
 defmodule Absinthe.Lexer do
   import Panacea.Lexer, only: [deflexer: 2]
 
+  @compile :native
+
   # Ignored tokens
   whitespace = "[\u{0009}\u{000B}\u{000C}\u{0020}\u{00A0}]"
   line_terminator_ = "\u{000A}\u{000D}\u{2028}\u{2029}"
@@ -43,26 +45,19 @@ defmodule Absinthe.Lexer do
   deflexer :lexer do
     defrule ignored,
       do: :skip
-    defrule punctuator, meta(token: token) = meta,
-      do: {:token, {String.to_atom(token), line_data(meta)}}
-    defrule reserved_word, meta(token: token) = meta,
-      do: {:token, {String.to_atom(token), line_data(meta)}}
-    defrule int_value, meta(token: token) = meta,
-      do: {:token, {:int_value, line_data(meta), token}}
-    defrule float_value, meta(token: token) = meta,
-      do: {:token, {:float_value, line_data(meta), token}}
-    defrule string_value, meta(token: token) = meta,
-      do: {:token, {:string_value, line_data(meta), token}}
-    defrule boolean_value, meta(token: token) = meta,
-      do: {:token, {:boolean_value, line_data(meta), token}}
-    defrule name, meta(token: token) = meta,
-      do: {:token, {:name, line_data(meta), token}}
-  end
-
-  import Panacea.Lexer, only: [meta: 1]
-
-  @compile {:inline, line_data: 1}
-  defp line_data(meta(line: line, start: start, len: len)) do
-    {line, {start, start + len}}
+    defrule punctuator, meta(token: token, line: line),
+      do: {:token, {String.to_atom(token), line}}
+    defrule reserved_word, meta(token: token, line: line),
+      do: {:token, {String.to_atom(token), line}}
+    defrule int_value, meta(token: token, line: line),
+      do: {:token, {:int_value, line, token}}
+    defrule float_value, meta(token: token, line: line),
+      do: {:token, {:float_value, line, token}}
+    defrule string_value, meta(token: token, line: line),
+      do: {:token, {:string_value, line, token}}
+    defrule boolean_value, meta(token: token, line: line),
+      do: {:token, {:boolean_value, line, token}}
+    defrule name, meta(token: token, line: line),
+      do: {:token, {:name, line, token}}
   end
 end
