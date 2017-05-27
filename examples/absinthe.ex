@@ -1,7 +1,7 @@
 defmodule Absinthe.Lexer do
-  import Panacea.Lexer, only: [deflexer: 2]
+  import Panacea
 
-  @compile :native
+  #@compile :native
 
   # Ignored tokens
   whitespace = "[\u{0009}\u{000B}\u{000C}\u{0020}\u{00A0}]"
@@ -50,13 +50,13 @@ defmodule Absinthe.Lexer do
     defrule reserved_word, meta(token: token, line: line),
       do: {:token, {String.to_atom(token), line}}
     defrule int_value, meta(token: token, line: line),
-      do: {:token, {:int_value, line, token}}
+      do: {:token, {:int_value, line, String.to_integer(token)}}
     defrule float_value, meta(token: token, line: line),
-      do: {:token, {:float_value, line, token}}
+      do: {:token, {:float_value, line, String.to_float(token)}}
     defrule string_value, meta(token: token, line: line),
       do: {:token, {:string_value, line, token}}
     defrule boolean_value, meta(token: token, line: line),
-      do: {:token, {:boolean_value, line, token}}
+      do: {:token, {:boolean_value, line, String.to_atom(token)}}
     defrule name, meta(token: token, line: line),
       do: {:token, {:name, line, token}}
   end

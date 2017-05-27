@@ -5,13 +5,13 @@ defmodule Panacea.Lexer.Codegen do
 
   def compile(name, reas) do
     {dfa, first} = build_dfa(reas)
-    [codegen_initial(name, first) | Enum.flat_map(dfa, &codegen_dfa(&1, name))]
+    [codegen_initial(name, first) | Enum.map(dfa, &codegen_dfa(&1, name))]
   end
 
   defp codegen_initial(name, first) do
     first_name = :"#{name}_#{first}"
     quote do
-      def unquote(name)(input) do
+      def unquote(name)(input) when is_binary(input) do
         try do
           unquote(first_name)(input, _start = 0, _line = 1, _len = 0, _original = input)
         catch
@@ -27,41 +27,34 @@ defmodule Panacea.Lexer.Codegen do
       defp panacea_state(input, start, line, len, original, unquote(name)) do
         unquote(first_name)(input, start, line, len, original)
       end
+
+      defp unquote(first_name)("", _start, _line, _len, _original) do
+        []
+      end
     end
   end
 
+
   defp codegen_dfa(%Dfa{id: id, trans: trans, accept: accept}, name) do
     state_name = :"#{name}_#{id}"
-    Enum.map(trans, &codegen_trans(&1, state_name, name)) ++
-      [codegen_accept(accept, state_name, name)]
+    [Enum.map(trans, &codegen_trans(&1, state_name, name)),
+     codegen_accept(accept, state_name, name)]
   end
 
   defp codegen_accept(nil, state_name, _name) do
     quote do
+      defp unquote(state_name)(<<char::utf8, _rest::bitstring>>, start, line, len, original) do
+        throw {:panacea, {char, line, start + len}}
+      end
       defp unquote(state_name)("", start, line, len, original) do
         throw {:panacea, {:eof, line, start + len}}
-      end
-      defp unquote(state_name)(<<char::utf8>> <> _rest, start, line, len, original) do
-        throw {:panacea, {char, line, start + len}}
       end
     end
   end
 
   defp codegen_accept({:accept, action}, state_name, name) do
     quote do
-      defp unquote(state_name)("", start, line, len, original) do
-        token = binary_part(original, 0, len)
-        meta = meta(start: start, line: line, len: len, token: token)
-        case unquote(action)(meta) do
-          {:token, token} ->
-            [token]
-          :skip ->
-            []
-          {:error, error} ->
-            throw {:panacea, error}
-        end
-      end
-      defp unquote(state_name)(<<rest::binary>>, start, line, len, original) do
+      defp unquote(state_name)(<<rest::bitstring>>, start, line, len, original) do
         token = binary_part(original, 0, len)
         new_original = binary_part(original, len, byte_size(original) - len)
         meta = meta(start: start, line: line, len: len, token: token)
@@ -84,7 +77,7 @@ defmodule Panacea.Lexer.Codegen do
   defp codegen_trans({{low, :maxchar}, next}, state_name, name) do
     next_name = :"#{name}_#{next}"
     quote do
-      defp unquote(state_name)(<<char::utf8>> <> rest, start, line, len, original)
+      defp unquote(state_name)(<<char::utf8, rest::bitstring>>, start, line, len, original)
            when char >= unquote(low) do
         unquote(next_name)(rest, start, line, len + 1, original)
       end
@@ -93,7 +86,7 @@ defmodule Panacea.Lexer.Codegen do
   defp codegen_trans({{low, hi}, next}, state_name, name) do
     next_name = :"#{name}_#{next}"
     quote do
-      defp unquote(state_name)(<<char::utf8>> <> rest, start, line, len, original)
+      defp unquote(state_name)(<<char::utf8, rest::bitstring>>, start, line, len, original)
            when char >= unquote(low) and char <= unquote(hi) do
         unquote(next_name)(rest, start, line, len + 1, original)
       end
@@ -103,7 +96,7 @@ defmodule Panacea.Lexer.Codegen do
   defp codegen_trans({?\n, next}, state_name, name) do
     next_name = :"#{name}_#{next}"
     quote do
-      defp unquote(state_name)("\n" <> rest, start, line, len, original) do
+      defp unquote(state_name)(<<?\n::utf8, rest::bitstring>>, start, line, len, original) do
         unquote(next_name)(rest, 0, line + 1, len + 1, original)
       end
     end
@@ -111,7 +104,7 @@ defmodule Panacea.Lexer.Codegen do
   defp codegen_trans({char, next}, state_name, name) do
     next_name = :"#{name}_#{next}"
     quote do
-      defp unquote(state_name)(<<char::utf8>> <> rest, start, line, len, original)
+      defp unquote(state_name)(<<char::utf8, rest::bitstring>>, start, line, len, original)
            when char === unquote(char) do
         unquote(next_name)(rest, start, line, len + 1, original)
       end

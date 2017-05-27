@@ -3,18 +3,12 @@ defmodule Panacea.Lexer do
 
   defrecord :meta, [:token, :line, :start, :len]
 
-  defmacro __using__(_) do
-    quote do
-      import Panacea.Lexer, only: [deflexer: 2]
-    end
-  end
-
-  defmacro deflexer(name, [do: block]) do
+  def deflexer(name, [do: block]) do
     quote do
       Module.register_attribute(__MODULE__, :panacea_lexer_rules, accumulate: true)
 
       try do
-        import Panacea.Lexer
+        import Panacea.Lexer, except: [deflexer: 2]
         unquote(block)
       after
         :ok
